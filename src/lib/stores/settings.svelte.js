@@ -43,3 +43,15 @@ export function saveSettings() {
 export function isConfigured() {
 	return Boolean(settings.spreadsheetId);
 }
+
+/**
+ * Resets just the column mapping and people list back to the built-in
+ * defaults, leaving the spreadsheet/tab selection untouched. Useful when
+ * the app's defaults change after settings were already saved, since a
+ * saved value always overrides the current code default otherwise.
+ */
+export function resetColumnMapping() {
+	settings.columns = structuredClone(DEFAULT_SETTINGS.columns);
+	settings.people = structuredClone(DEFAULT_SETTINGS.people);
+	saveSettings();
+}

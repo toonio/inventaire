@@ -1,7 +1,7 @@
 <script>
 	import { auth, isSignedIn } from '$lib/stores/auth.svelte.js';
 	import { signIn, signOut } from '$lib/google/auth.js';
-	import { settings, saveSettings } from '$lib/stores/settings.svelte.js';
+	import { settings, saveSettings, resetColumnMapping } from '$lib/stores/settings.svelte.js';
 	import { listTabs } from '$lib/google/sheets.js';
 	import { openSpreadsheetPicker } from '$lib/google/picker.js';
 
@@ -62,6 +62,11 @@
 
 	function addPerson() {
 		settings.people.push({ name: '', column: '' });
+	}
+
+	function handleResetMapping() {
+		if (!confirm('Réinitialiser la correspondance des colonnes et la liste des personnes ?')) return;
+		resetColumnMapping();
 	}
 
 	function removePerson(index) {
@@ -175,6 +180,10 @@
 		{/each}
 		<button class="btn" onclick={addPerson}>+ Ajouter une personne</button>
 	</div>
+
+	<button class="btn" onclick={handleResetMapping}>
+		↺ Réinitialiser la correspondance des colonnes par défaut
+	</button>
 
 	<button class="btn btn-primary btn-block" onclick={saveSettings}>Enregistrer les réglages</button>
 </div>
