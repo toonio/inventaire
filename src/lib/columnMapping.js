@@ -1,3 +1,19 @@
+function normalizeHeaderName(name) {
+	return (name ?? '').trim().toLowerCase();
+}
+
+/**
+ * Finds a header's column index, ignoring case and leading/trailing
+ * whitespace differences between Settings' configured column name and the
+ * spreadsheet's actual header (a common source of silent mismatches when
+ * headers are typed by hand).
+ */
+function findHeaderIndex(headers, name) {
+	const target = normalizeHeaderName(name);
+	if (!target) return -1;
+	return headers.findIndex((h) => normalizeHeaderName(h) === target);
+}
+
 /**
  * Resolves the configured logical field names (from Settings) to actual
  * column indexes in a tab's header row. Missing columns resolve to -1 and
@@ -5,14 +21,13 @@
  * tab doesn't have every column.
  */
 export function buildColumnIndex(headers, settings) {
-	const indexOf = (name) => headers.indexOf(name);
 	return {
-		designation: indexOf(settings.columns.designation),
-		photo: indexOf(settings.columns.photo),
-		comments: indexOf(settings.columns.comments),
-		estimation: indexOf(settings.columns.estimation),
-		attribution: indexOf(settings.columns.attribution),
-		desires: settings.people.map((p) => ({ name: p.name, index: indexOf(p.column) }))
+		designation: findHeaderIndex(headers, settings.columns.designation),
+		photo: findHeaderIndex(headers, settings.columns.photo),
+		comments: findHeaderIndex(headers, settings.columns.comments),
+		estimation: findHeaderIndex(headers, settings.columns.estimation),
+		attribution: findHeaderIndex(headers, settings.columns.attribution),
+		desires: settings.people.map((p) => ({ name: p.name, index: findHeaderIndex(headers, p.column) }))
 	};
 }
 

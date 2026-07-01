@@ -4,7 +4,7 @@
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, updateRow, deleteRow } from '$lib/google/sheets.js';
 	import { buildColumnIndex, rowToItem, itemToRow } from '$lib/columnMapping.js';
-	import { extractImageUrl, extractFileId } from '$lib/google/drive.js';
+	import { resolvePhotoUrl, extractFileId } from '$lib/google/drive.js';
 	import { deletePreviousPhoto } from '$lib/photoUpload.js';
 	import StarRating from '$lib/components/StarRating.svelte';
 	import PhotoInput from '$lib/components/PhotoInput.svelte';
@@ -75,7 +75,7 @@
 	function startEdit(entry) {
 		editingRowNumber = entry.rowNumber;
 		draft = { ...entry.item, desires: { ...entry.item.desires } };
-		draftPhotoPreview = extractImageUrl(entry.item.photo);
+		draftPhotoPreview = resolvePhotoUrl(entry.item.photo);
 		originalPhotoFileId = extractFileId(entry.item.photo);
 	}
 
@@ -160,6 +160,15 @@
 
 	{#if loading}<p class="muted">Chargement…</p>{/if}
 
+	{#if headers.length && columnIndex.photo === -1}
+		<p class="error-banner">
+			La colonne « {settings.columns.photo} » (Photo) est introuvable dans cet onglet — les photos
+			ne peuvent pas s'afficher. Vérifiez le nom de la colonne dans <a href="{base}/settings"
+				>Réglages</a
+			>.
+		</p>
+	{/if}
+
 	<div class="stack">
 		{#each items as entry (entry.rowNumber)}
 			<div class="card">
@@ -209,9 +218,9 @@
 							<button class="btn btn-danger" onclick={() => removeItem(entry)}>Supprimer</button>
 						</div>
 					</div>
-					{#if extractImageUrl(entry.item.photo)}
+					{#if resolvePhotoUrl(entry.item.photo)}
 						<img
-							src={extractImageUrl(entry.item.photo)}
+							src={resolvePhotoUrl(entry.item.photo)}
 							alt={entry.item.designation}
 							class="photo-preview"
 						/>

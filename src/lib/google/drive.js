@@ -66,8 +66,15 @@ export async function deleteFile(accessToken, fileId) {
 	return apiFetch(`${BASE_URL}/files/${fileId}`, accessToken, { method: 'DELETE' });
 }
 
-export function driveViewUrl(fileId) {
-	return `https://drive.google.com/uc?export=view&id=${fileId}`;
+/**
+ * Drive's dedicated thumbnail endpoint. Unlike `uc?export=view`, this is
+ * meant for embedding: it serves the image directly with no redirect/
+ * attachment disposition, so it doesn't get aborted by Firefox's stricter
+ * download handling (NS_BINDING_ABORTED) and renders reliably in both
+ * <img> tags and Sheets' IMAGE() formula.
+ */
+export function driveViewUrl(fileId, size = 1600) {
+	return `https://drive.google.com/thumbnail?id=${fileId}&sz=w${size}`;
 }
 
 export function imageFormula(fileId) {
@@ -92,4 +99,16 @@ export function extractFileId(cellValue) {
 	const pathId = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
 	if (pathId) return pathId[1];
 	return null;
+}
+
+/**
+ * Resolves the best displayable image URL for a cell value: re-derives the
+ * reliable thumbnail URL from the Drive file id when possible (fixing up
+ * photos stored with the old uc?export=view format), falling back to
+ * whatever URL is in the cell for non-Drive links.
+ */
+export function resolvePhotoUrl(cellValue) {
+	const fileId = extractFileId(cellValue);
+	if (fileId) return driveViewUrl(fileId);
+	return extractImageUrl(cellValue);
 }

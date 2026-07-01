@@ -36,6 +36,13 @@ describe('buildColumnIndex', () => {
 		expect(idx.photo).toBe(-1);
 		expect(idx.desires[0].index).toBe(-1);
 	});
+
+	it('matches headers regardless of case or surrounding whitespace', () => {
+		const idx = buildColumnIndex([' Designation ', 'PHOTO', 'marion'], settings);
+		expect(idx.designation).toBe(0);
+		expect(idx.photo).toBe(1);
+		expect(idx.desires[0].index).toBe(2);
+	});
 });
 
 describe('rowToItem / itemToRow round-trip', () => {

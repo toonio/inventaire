@@ -110,11 +110,18 @@ source of truth and stays editable directly in Google Sheets if needed.
   link can view"**. This is required because Google Sheets' `=IMAGE()`
   formula is fetched by Google's own servers, unauthenticated — it cannot
   read a private Drive file even if the sheet owner has access to it.
-- Store the cell value as `=IMAGE("https://drive.google.com/uc?export=view&id=FILE_ID")`
-  so the photo renders natively as a thumbnail directly in Google Sheets,
-  not just inside the app. Keep the raw Drive file ID/URL retrievable too
-  (e.g. parsed back out of the formula) so the app can display/replace the
-  photo without re-parsing sheet formulas unnecessarily.
+- Store the cell value as
+  `=IMAGE("https://drive.google.com/thumbnail?id=FILE_ID&sz=w1600")` so the
+  photo renders natively as a thumbnail directly in Google Sheets, not just
+  inside the app. The `thumbnail` endpoint is used rather than the more
+  commonly seen `uc?export=view`, because the latter can respond with a
+  redirect/attachment disposition that Firefox aborts when embedded in an
+  `<img>` tag (`NS_BINDING_ABORTED`); `thumbnail` is Drive's endpoint built
+  for embedding and doesn't have that problem in either `<img>` tags or
+  Sheets' `IMAGE()`. The app always re-derives this URL from the Drive file
+  id at render time (`resolvePhotoUrl`) rather than trusting whatever URL
+  happens to be stored, so photos saved under the old format still display
+  correctly without needing to be re-uploaded.
 - When replacing a photo, delete (or leave orphaned, TBD) the previous
   Drive file to avoid unbounded storage growth — prefer deleting the old
   file after a successful re-upload.
