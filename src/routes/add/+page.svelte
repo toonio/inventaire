@@ -3,7 +3,7 @@
 	import { settings, isConfigured } from '$lib/stores/settings.svelte.js';
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, appendRow } from '$lib/google/sheets.js';
-	import { buildColumnIndex, itemToRow } from '$lib/columnMapping.js';
+	import { buildColumnIndex, itemToRow, computeNextItemNumber } from '$lib/columnMapping.js';
 	import StarRating from '$lib/components/StarRating.svelte';
 	import PhotoInput from '$lib/components/PhotoInput.svelte';
 	import { base } from '$app/paths';
@@ -11,6 +11,7 @@
 	let tabs = $state([]);
 	let selectedTab = $state('');
 	let headers = $state([]);
+	let rows = $state([]);
 	let loading = $state(false);
 	let error = $state('');
 	let success = $state('');
@@ -19,8 +20,6 @@
 		return {
 			designation: '',
 			photo: '',
-			comments: '',
-			estimation: '',
 			attribution: '',
 			desires: Object.fromEntries(settings.people.map((p) => [p.name, 0]))
 		};
@@ -30,6 +29,7 @@
 	let photoPreview = $state(null);
 
 	const columnIndex = $derived(buildColumnIndex(headers, settings));
+	const nextItemNumber = $derived(computeNextItemNumber(rows, columnIndex));
 
 	$effect(() => {
 		if (isSignedIn() && isConfigured()) {
@@ -46,16 +46,17 @@
 			if (!selectedTab || !tabs.some((t) => t.title === selectedTab)) {
 				selectedTab = tabs[0]?.title ?? '';
 			}
-			if (selectedTab) await loadHeaders(selectedTab);
+			if (selectedTab) await loadTabData(selectedTab);
 		} catch (err) {
 			error = err.message;
 		}
 	}
 
-	async function loadHeaders(tabTitle) {
+	async function loadTabData(tabTitle) {
 		try {
 			const data = await getTabData(settings.spreadsheetId, tabTitle, auth.accessToken);
 			headers = data.headers;
+			rows = data.rows;
 		} catch (err) {
 			error = err.message;
 		}
@@ -63,7 +64,7 @@
 
 	function selectTab(title) {
 		selectedTab = title;
-		loadHeaders(title);
+		loadTabData(title);
 	}
 
 	function handlePhotoChange(result) {
@@ -77,11 +78,13 @@
 		error = '';
 		success = '';
 		try {
-			const row = itemToRow(form, columnIndex, headers.length);
+			const item = { ...form, itemNumber: nextItemNumber };
+			const row = itemToRow(item, columnIndex, headers.length);
 			await appendRow(settings.spreadsheetId, selectedTab, auth.accessToken, row);
 			success = `« ${form.designation || 'Objet'} » ajouté à ${selectedTab}.`;
 			form = emptyForm();
 			photoPreview = null;
+			await loadTabData(selectedTab);
 		} catch (err) {
 			error = err.message;
 		} finally {
@@ -117,6 +120,10 @@
 			</select>
 		</div>
 
+		{#if nextItemNumber}
+			<p class="muted">N° {nextItemNumber} (attribué automatiquement)</p>
+		{/if}
+
 		<PhotoInput previewUrl={photoPreview} onChange={handlePhotoChange} />
 
 		<div class="field">
@@ -134,16 +141,6 @@
 					/>
 				</div>
 			{/each}
-		</div>
-
-		<div class="field">
-			<label for="comments">Commentaires</label>
-			<textarea id="comments" bind:value={form.comments}></textarea>
-		</div>
-
-		<div class="field">
-			<label for="estimation">Estimation (€)</label>
-			<input id="estimation" bind:value={form.estimation} inputmode="decimal" />
 		</div>
 
 		<button class="btn btn-primary btn-block" type="submit" disabled={loading || !selectedTab}>

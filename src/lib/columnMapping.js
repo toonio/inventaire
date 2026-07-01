@@ -22,10 +22,9 @@ function findHeaderIndex(headers, name) {
  */
 export function buildColumnIndex(headers, settings) {
 	return {
+		itemNumber: findHeaderIndex(headers, settings.columns.itemNumber),
 		designation: findHeaderIndex(headers, settings.columns.designation),
 		photo: findHeaderIndex(headers, settings.columns.photo),
-		comments: findHeaderIndex(headers, settings.columns.comments),
-		estimation: findHeaderIndex(headers, settings.columns.estimation),
 		attribution: findHeaderIndex(headers, settings.columns.attribution),
 		desires: settings.people.map((p) => ({ name: p.name, index: findHeaderIndex(headers, p.column) }))
 	};
@@ -35,10 +34,9 @@ export function buildColumnIndex(headers, settings) {
 export function rowToItem(row, columnIndex) {
 	const get = (i) => (i >= 0 ? (row[i] ?? '') : '');
 	return {
+		itemNumber: get(columnIndex.itemNumber),
 		designation: get(columnIndex.designation),
 		photo: get(columnIndex.photo),
-		comments: get(columnIndex.comments),
-		estimation: get(columnIndex.estimation),
 		attribution: get(columnIndex.attribution),
 		desires: Object.fromEntries(columnIndex.desires.map((d) => [d.name, get(d.index)]))
 	};
@@ -53,11 +51,25 @@ export function itemToRow(item, columnIndex, headerCount, existingRow = []) {
 	const set = (i, value) => {
 		if (i >= 0) row[i] = value ?? '';
 	};
+	set(columnIndex.itemNumber, item.itemNumber);
 	set(columnIndex.designation, item.designation);
 	set(columnIndex.photo, item.photo);
-	set(columnIndex.comments, item.comments);
-	set(columnIndex.estimation, item.estimation);
 	set(columnIndex.attribution, item.attribution);
 	columnIndex.desires.forEach((d) => set(d.index, item.desires?.[d.name]));
 	return row;
+}
+
+/**
+ * Computes the next sequential item number for a tab from the highest
+ * existing numeric N° value, so adding an item doesn't require typing one
+ * in manually. Returns null if the tab has no N° column configured.
+ */
+export function computeNextItemNumber(rows, columnIndex) {
+	if (columnIndex.itemNumber < 0) return null;
+	let max = 0;
+	for (const row of rows) {
+		const value = Number(row[columnIndex.itemNumber]);
+		if (Number.isFinite(value) && value > max) max = value;
+	}
+	return max + 1;
 }

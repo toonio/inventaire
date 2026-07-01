@@ -174,6 +174,7 @@
 			<div class="card">
 				{#if editingRowNumber === entry.rowNumber}
 					<div class="stack">
+						{#if draft.itemNumber}<p class="muted">N°{draft.itemNumber}</p>{/if}
 						<PhotoInput previewUrl={draftPhotoPreview} onChange={handlePhotoChange} />
 						<div class="field">
 							<label for={`designation-${entry.rowNumber}`}>Désignation</label>
@@ -188,14 +189,6 @@
 								/>
 							</div>
 						{/each}
-						<div class="field">
-							<label for={`comments-${entry.rowNumber}`}>Commentaires</label>
-							<textarea id={`comments-${entry.rowNumber}`} bind:value={draft.comments}></textarea>
-						</div>
-						<div class="field">
-							<label for={`estimation-${entry.rowNumber}`}>Estimation (€)</label>
-							<input id={`estimation-${entry.rowNumber}`} bind:value={draft.estimation} />
-						</div>
 						<div class="field">
 							<label for={`attribution-${entry.rowNumber}`}>Attribution</label>
 							<select id={`attribution-${entry.rowNumber}`} bind:value={draft.attribution}>
@@ -212,7 +205,10 @@
 					</div>
 				{:else}
 					<div class="row-between">
-						<strong>{entry.item.designation || '(sans désignation)'}</strong>
+						<strong>
+							{#if entry.item.itemNumber}<span class="muted">N°{entry.item.itemNumber} —</span>{/if}
+							{entry.item.designation || '(sans désignation)'}
+						</strong>
 						<div class="row">
 							<button class="btn" onclick={() => startEdit(entry)}>Modifier</button>
 							<button class="btn btn-danger" onclick={() => removeItem(entry)}>Supprimer</button>
@@ -233,11 +229,9 @@
 							</div>
 						{/each}
 					</div>
-					{#if entry.item.comments}<p class="muted">{entry.item.comments}</p>{/if}
-					<div class="row-between muted">
-						<span>{entry.item.estimation ? `${entry.item.estimation} €` : ''}</span>
-						<span>{entry.item.attribution}</span>
-					</div>
+					{#if entry.item.attribution}
+						<p class="muted">Attribué à : {entry.item.attribution}</p>
+					{/if}
 				{/if}
 			</div>
 		{:else}

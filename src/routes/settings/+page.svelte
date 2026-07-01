@@ -138,8 +138,13 @@
 	<div class="card stack">
 		<h2>Correspondance des colonnes</h2>
 		<p class="muted">
-			Indiquez le nom exact de l'en-tête utilisé dans le classeur pour chaque champ.
+			Indiquez le nom exact de l'en-tête utilisé dans le classeur pour chaque champ (la casse
+			n'a pas d'importance).
 		</p>
+		<div class="field">
+			<label for="col-item-number">N° (numéro d'objet)</label>
+			<input id="col-item-number" bind:value={settings.columns.itemNumber} />
+		</div>
 		<div class="field">
 			<label for="col-designation">Désignation</label>
 			<input id="col-designation" bind:value={settings.columns.designation} />
@@ -149,15 +154,7 @@
 			<input id="col-photo" bind:value={settings.columns.photo} />
 		</div>
 		<div class="field">
-			<label for="col-comments">Commentaires</label>
-			<input id="col-comments" bind:value={settings.columns.comments} />
-		</div>
-		<div class="field">
-			<label for="col-estimation">Estimation</label>
-			<input id="col-estimation" bind:value={settings.columns.estimation} />
-		</div>
-		<div class="field">
-			<label for="col-attribution">Attribution</label>
+			<label for="col-attribution">Attribution (validation finale)</label>
 			<input id="col-attribution" bind:value={settings.columns.attribution} />
 		</div>
 	</div>

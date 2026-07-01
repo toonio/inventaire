@@ -1,44 +1,42 @@
 import { describe, it, expect } from 'vitest';
-import { buildColumnIndex, rowToItem, itemToRow } from './columnMapping.js';
+import { buildColumnIndex, rowToItem, itemToRow, computeNextItemNumber } from './columnMapping.js';
 
 const settings = {
 	columns: {
-		designation: 'designation',
-		photo: 'photo',
-		comments: 'Commentaires',
-		estimation: 'estimation',
-		attribution: 'attribution'
+		itemNumber: 'N°',
+		designation: 'Nom',
+		photo: 'Photo',
+		attribution: 'Validation'
 	},
 	people: [
-		{ name: 'Marion', column: 'Marion' },
-		{ name: 'Florent', column: 'Florent' }
+		{ name: 'Fanny', column: 'Fanny' },
+		{ name: 'Marion', column: 'Marion' }
 	]
 };
 
-const headers = ['designation', 'photo', 'Marion', 'Florent', 'Commentaires', 'estimation', 'attribution'];
+const headers = ['N°', 'Nom', 'Photo', 'Fanny', 'Marion', 'Validation'];
 
 describe('buildColumnIndex', () => {
 	it('resolves configured column names to header indexes', () => {
 		const idx = buildColumnIndex(headers, settings);
-		expect(idx.designation).toBe(0);
-		expect(idx.photo).toBe(1);
-		expect(idx.comments).toBe(4);
-		expect(idx.estimation).toBe(5);
-		expect(idx.attribution).toBe(6);
+		expect(idx.itemNumber).toBe(0);
+		expect(idx.designation).toBe(1);
+		expect(idx.photo).toBe(2);
+		expect(idx.attribution).toBe(5);
 		expect(idx.desires).toEqual([
-			{ name: 'Marion', index: 2 },
-			{ name: 'Florent', index: 3 }
+			{ name: 'Fanny', index: 3 },
+			{ name: 'Marion', index: 4 }
 		]);
 	});
 
 	it('resolves missing columns to -1 instead of throwing', () => {
-		const idx = buildColumnIndex(['designation'], settings);
+		const idx = buildColumnIndex(['Nom'], settings);
 		expect(idx.photo).toBe(-1);
 		expect(idx.desires[0].index).toBe(-1);
 	});
 
 	it('matches headers regardless of case or surrounding whitespace', () => {
-		const idx = buildColumnIndex([' Designation ', 'PHOTO', 'marion'], settings);
+		const idx = buildColumnIndex([' NOM ', 'photo', 'fanny'], settings);
 		expect(idx.designation).toBe(0);
 		expect(idx.photo).toBe(1);
 		expect(idx.desires[0].index).toBe(2);
@@ -49,44 +47,72 @@ describe('rowToItem / itemToRow round-trip', () => {
 	const columnIndex = buildColumnIndex(headers, settings);
 
 	it('parses a raw row into a logical item', () => {
-		const row = ['Commode', '=IMAGE("https://x")', '4', '2', 'Belle pièce', '150', 'Marion'];
+		const row = ['12', 'Commode', '=IMAGE("https://x")', '4', '2', 'Marion'];
 		const item = rowToItem(row, columnIndex);
 		expect(item).toEqual({
+			itemNumber: '12',
 			designation: 'Commode',
 			photo: '=IMAGE("https://x")',
-			comments: 'Belle pièce',
-			estimation: '150',
 			attribution: 'Marion',
-			desires: { Marion: '4', Florent: '2' }
+			desires: { Fanny: '4', Marion: '2' }
 		});
 	});
 
 	it('serializes an item back to a row matching the header layout', () => {
 		const item = {
+			itemNumber: 12,
 			designation: 'Commode',
 			photo: '=IMAGE("https://x")',
-			comments: 'Belle pièce',
-			estimation: '150',
 			attribution: 'Marion',
-			desires: { Marion: 4, Florent: 2 }
+			desires: { Fanny: 4, Marion: 2 }
 		};
 		const row = itemToRow(item, columnIndex, headers.length);
-		expect(row).toEqual(['Commode', '=IMAGE("https://x")', 4, 2, 'Belle pièce', '150', 'Marion']);
+		expect(row).toEqual([12, 'Commode', '=IMAGE("https://x")', 4, 2, 'Marion']);
 	});
 
 	it('preserves unmapped columns from the existing row when updating', () => {
 		const extendedHeaders = [...headers, 'notes internes'];
 		const idx = buildColumnIndex(extendedHeaders, settings);
-		const existingRow = ['Old', '', '', '', '', '', '', 'ne pas toucher'];
+		const existingRow = ['1', 'Old', '', '', '', '', 'ne pas toucher'];
 		const item = {
+			itemNumber: '1',
 			designation: 'Commode',
 			photo: '',
-			comments: '',
-			estimation: '',
 			attribution: '',
 			desires: {}
 		};
 		const row = itemToRow(item, idx, extendedHeaders.length, existingRow);
-		expect(row[7]).toBe('ne pas toucher');
+		expect(row[6]).toBe('ne pas toucher');
+	});
+});
+
+describe('computeNextItemNumber', () => {
+	const columnIndex = buildColumnIndex(headers, settings);
+
+	it('returns 1 for an empty tab', () => {
+		expect(computeNextItemNumber([], columnIndex)).toBe(1);
+	});
+
+	it('returns the highest existing number plus one', () => {
+		const rows = [
+			['3', 'A', '', '', '', ''],
+			['1', 'B', '', '', '', ''],
+			['7', 'C', '', '', '', '']
+		];
+		expect(computeNextItemNumber(rows, columnIndex)).toBe(8);
+	});
+
+	it('ignores non-numeric or blank N° values', () => {
+		const rows = [
+			['', 'A', '', '', '', ''],
+			['abc', 'B', '', '', '', ''],
+			['4', 'C', '', '', '', '']
+		];
+		expect(computeNextItemNumber(rows, columnIndex)).toBe(5);
+	});
+
+	it('returns null when no N° column is configured', () => {
+		const idx = buildColumnIndex(['Nom'], settings);
+		expect(computeNextItemNumber([], idx)).toBeNull();
 	});
 });

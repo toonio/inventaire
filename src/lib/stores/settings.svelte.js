@@ -6,17 +6,16 @@ const DEFAULT_SETTINGS = {
 	// null = every tab in the spreadsheet is treated as a category
 	includedTabs: null,
 	columns: {
-		designation: 'designation',
-		photo: 'photo',
-		comments: 'Commentaires',
-		estimation: 'estimation',
-		attribution: 'attribution'
+		itemNumber: 'N°',
+		designation: 'Nom',
+		photo: 'Photo',
+		attribution: 'Validation'
 	},
 	people: [
-		{ name: 'Marion', column: 'Marion' },
-		{ name: 'Florent', column: 'Florent' },
 		{ name: 'Fanny', column: 'Fanny' },
-		{ name: 'Antoine', column: 'Antoine' }
+		{ name: 'Antoine', column: 'Antoine' },
+		{ name: 'Flo', column: 'Flo' },
+		{ name: 'Marion', column: 'Marion' }
 	],
 	driveFolderId: null
 };
