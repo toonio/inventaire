@@ -1,0 +1,222 @@
+:root {
+	--color-bg: #faf9f7;
+	--color-surface: #ffffff;
+	--color-border: #e4e0da;
+	--color-text: #1f1b16;
+	--color-muted: #766e63;
+	--color-accent: #a1592f;
+	--color-star: #d9a441;
+	--radius: 12px;
+	color-scheme: light;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--color-bg);
+	color: var(--color-text);
+	font-family:
+		system-ui,
+		-apple-system,
+		'Segoe UI',
+		Roboto,
+		sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+a {
+	color: inherit;
+}
+
+.app-shell {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.app-header {
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.75rem 1rem;
+	background: var(--color-surface);
+	border-bottom: 1px solid var(--color-border);
+}
+
+.app-title {
+	font-weight: 600;
+	font-size: 1.05rem;
+}
+
+.app-main {
+	flex: 1;
+	padding: 1rem;
+	padding-bottom: 5.5rem;
+	max-width: 640px;
+	width: 100%;
+	margin: 0 auto;
+}
+
+.app-nav {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	display: flex;
+	background: var(--color-surface);
+	border-top: 1px solid var(--color-border);
+	padding-bottom: env(safe-area-inset-bottom);
+	z-index: 10;
+}
+
+.app-nav a {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.15rem;
+	padding: 0.6rem 0;
+	text-decoration: none;
+	color: var(--color-muted);
+	font-size: 0.78rem;
+}
+
+.app-nav a.active {
+	color: var(--color-accent);
+	font-weight: 600;
+}
+
+.card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: var(--radius);
+	padding: 1rem;
+	margin-bottom: 1rem;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface);
+	border-radius: 999px;
+	padding: 0.65rem 1.1rem;
+	font-weight: 600;
+	font-size: 0.95rem;
+}
+
+.btn-primary {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+	color: #fff;
+}
+
+.btn-danger {
+	color: #b3261e;
+	border-color: #f0c9c5;
+}
+
+.btn-block {
+	width: 100%;
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.3rem;
+	margin-bottom: 0.9rem;
+}
+
+.field label {
+	font-size: 0.85rem;
+	color: var(--color-muted);
+}
+
+.field input,
+.field select,
+.field textarea {
+	padding: 0.6rem 0.7rem;
+	border: 1px solid var(--color-border);
+	border-radius: 8px;
+	background: var(--color-surface);
+}
+
+.muted {
+	color: var(--color-muted);
+	font-size: 0.85rem;
+}
+
+.stack {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.row-between {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.tabs {
+	display: flex;
+	gap: 0.4rem;
+	overflow-x: auto;
+	padding-bottom: 0.5rem;
+	margin-bottom: 0.75rem;
+}
+
+.tab-chip {
+	flex: none;
+	padding: 0.45rem 0.9rem;
+	border-radius: 999px;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface);
+	font-size: 0.85rem;
+	white-space: nowrap;
+}
+
+.tab-chip.active {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+	color: #fff;
+}
+
+.error-banner {
+	background: #fdecea;
+	border: 1px solid #f0c9c5;
+	color: #7a2a22;
+	border-radius: var(--radius);
+	padding: 0.75rem 1rem;
+	margin-bottom: 1rem;
+	font-size: 0.9rem;
+}
