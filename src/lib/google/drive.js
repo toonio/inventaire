@@ -107,8 +107,8 @@ export function extractFileId(cellValue) {
  * photos stored with the old uc?export=view format), falling back to
  * whatever URL is in the cell for non-Drive links.
  */
-export function resolvePhotoUrl(cellValue) {
+export function resolvePhotoUrl(cellValue, size) {
 	const fileId = extractFileId(cellValue);
-	if (fileId) return driveViewUrl(fileId);
+	if (fileId) return driveViewUrl(fileId, size);
 	return extractImageUrl(cellValue);
 }

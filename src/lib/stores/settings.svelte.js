@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'inventaire:settings';
 
+const DEFAULT_SPREADSHEET_ID = '1zbq4ngIC1SEVr0PQyuUb8EtgsUz2TW8UQzRljus9QXg';
+
 const DEFAULT_SETTINGS = {
-	spreadsheetId: '',
+	spreadsheetId: DEFAULT_SPREADSHEET_ID,
 	spreadsheetName: '',
 	// null = every tab in the spreadsheet is treated as a category
 	includedTabs: null,

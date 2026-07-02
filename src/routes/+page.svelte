@@ -21,6 +21,7 @@
 	let draft = $state(null);
 	let draftPhotoPreview = $state(null);
 	let originalPhotoFileId = $state(null);
+	let lightbox = $state(null);
 
 	const activeSheetId = $derived(tabs.find((t) => t.title === activeTabTitle)?.sheetId ?? null);
 	const columnIndex = $derived(buildColumnIndex(headers, settings));
@@ -131,7 +132,31 @@
 			loading = false;
 		}
 	}
+
+	/** Updates a single person's star rating immediately, without entering edit mode. */
+	async function updateDesire(entry, personName, value) {
+		const updatedItem = { ...entry.item, desires: { ...entry.item.desires, [personName]: value } };
+		const newRow = itemToRow(updatedItem, columnIndex, headers.length, entry.row);
+		const previousRow = entry.row;
+		rows[entry.rowNumber - 2] = newRow;
+		try {
+			await updateRow(settings.spreadsheetId, activeTabTitle, auth.accessToken, entry.rowNumber, newRow);
+		} catch (err) {
+			rows[entry.rowNumber - 2] = previousRow;
+			error = err.message;
+		}
+	}
+
+	function closeLightbox() {
+		lightbox = null;
+	}
+
+	function handleLightboxKeydown(e) {
+		if (e.key === 'Escape') closeLightbox();
+	}
 </script>
+
+<svelte:window onkeydown={handleLightboxKeydown} />
 
 {#if !isSignedIn()}
 	<p class="muted">Connectez-vous avec Google pour voir l'inventaire.</p>
@@ -215,17 +240,31 @@
 						</div>
 					</div>
 					{#if resolvePhotoUrl(entry.item.photo)}
-						<img
-							src={resolvePhotoUrl(entry.item.photo)}
-							alt={entry.item.designation}
-							class="photo-preview"
-						/>
+						<button
+							type="button"
+							class="photo-button"
+							onclick={() =>
+								(lightbox = {
+									url: resolvePhotoUrl(entry.item.photo, 2048),
+									alt: entry.item.designation || 'objet sans désignation'
+								})}
+							aria-label="Voir la photo en grand"
+						>
+							<img
+								src={resolvePhotoUrl(entry.item.photo)}
+								alt={entry.item.designation}
+								class="photo-preview"
+							/>
+						</button>
 					{/if}
 					<div class="stack">
 						{#each settings.people as person (person.name)}
 							<div class="row-between">
 								<span>{person.name}</span>
-								<StarRating value={entry.item.desires[person.name]} readonly />
+								<StarRating
+									value={entry.item.desires[person.name]}
+									onChange={(v) => updateDesire(entry, person.name, v)}
+								/>
 							</div>
 						{/each}
 					</div>
@@ -240,6 +279,12 @@
 	</div>
 {/if}
 
+{#if lightbox}
+	<div class="lightbox" onclick={closeLightbox} role="presentation">
+		<img src={lightbox.url} alt={lightbox.alt} />
+	</div>
+{/if}
+
 <style>
 	.photo-preview {
 		width: 100%;
@@ -247,5 +292,31 @@
 		object-fit: cover;
 		border-radius: var(--radius, 12px);
 		margin-bottom: 0.75rem;
+	}
+
+	.photo-button {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+	}
+
+	.lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.85);
+		padding: 1rem;
+	}
+
+	.lightbox img {
+		max-width: 100%;
+		max-height: 100%;
+		object-fit: contain;
+		border-radius: 4px;
 	}
 </style>
