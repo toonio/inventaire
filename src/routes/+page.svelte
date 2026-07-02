@@ -22,11 +22,18 @@
 	let draftPhotoPreview = $state(null);
 	let originalPhotoFileId = $state(null);
 	let lightbox = $state(null);
+	let hideAttributed = $state(false);
 
 	const activeSheetId = $derived(tabs.find((t) => t.title === activeTabTitle)?.sheetId ?? null);
 	const columnIndex = $derived(buildColumnIndex(headers, settings));
 	const items = $derived(
 		rows.map((row, i) => ({ rowNumber: i + 2, row, item: rowToItem(row, columnIndex) }))
+	);
+	const visibleItems = $derived(
+		items.filter(
+			(entry) =>
+				!hideAttributed || !entry.item.attribution || entry.rowNumber === editingRowNumber
+		)
 	);
 
 	$effect(() => {
@@ -185,6 +192,13 @@
 
 	{#if loading}<p class="muted">Chargement…</p>{/if}
 
+	{#if headers.length}
+		<label class="row hide-attributed-toggle">
+			<input type="checkbox" bind:checked={hideAttributed} />
+			Masquer les objets déjà attribués
+		</label>
+	{/if}
+
 	{#if headers.length && columnIndex.photo === -1}
 		<p class="error-banner">
 			La colonne « {settings.columns.photo} » (Photo) est introuvable dans cet onglet — les photos
@@ -195,7 +209,7 @@
 	{/if}
 
 	<div class="stack">
-		{#each items as entry (entry.rowNumber)}
+		{#each visibleItems as entry (entry.rowNumber)}
 			<div class="card" class:attributed={Boolean(entry.item.attribution)}>
 				{#if editingRowNumber === entry.rowNumber}
 					<div class="stack">
@@ -274,7 +288,11 @@
 				{/if}
 			</div>
 		{:else}
-			{#if !loading}<p class="muted">Aucun objet dans cet onglet.</p>{/if}
+			{#if !loading && items.length}
+				<p class="muted">Tous les objets de cet onglet sont attribués.</p>
+			{:else if !loading}
+				<p class="muted">Aucun objet dans cet onglet.</p>
+			{/if}
 		{/each}
 	</div>
 {/if}
@@ -286,6 +304,13 @@
 {/if}
 
 <style>
+	.hide-attributed-toggle {
+		gap: 0.4rem;
+		margin-bottom: 0.75rem;
+		font-size: 0.9rem;
+		color: var(--color-muted);
+	}
+
 	.card.attributed {
 		background: #e9dcc4;
 		border-color: #d3b688;

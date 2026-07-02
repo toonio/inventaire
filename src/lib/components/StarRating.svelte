@@ -100,6 +100,8 @@
 	.star.special.active {
 		opacity: 1;
 		filter: none;
+		border : 1px solid darkgray;
+		border-radius: 0.4rem;
 	}
 	.divider {
 		width: 1px;
