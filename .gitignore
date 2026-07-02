@@ -12,6 +12,9 @@ node_modules
 .DS_Store
 Thumbs.db
 
+# Local working data, not part of the app source
+/drive
+
 # Env
 .env
 .env.*
