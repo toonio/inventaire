@@ -73,3 +73,19 @@ export function computeNextItemNumber(rows, columnIndex) {
 	}
 	return max + 1;
 }
+
+/**
+ * Builds the header row for a brand-new tab from the current column
+ * mapping, so a newly created category is immediately usable by the app
+ * without the user having to type headers into the spreadsheet by hand.
+ * Blank/unconfigured columns are skipped.
+ */
+export function buildHeaderRow(settings) {
+	return [
+		settings.columns.itemNumber,
+		settings.columns.designation,
+		settings.columns.photo,
+		...settings.people.map((p) => p.column),
+		settings.columns.attribution
+	].filter((name) => name && name.trim());
+}

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildColumnIndex, rowToItem, itemToRow, computeNextItemNumber } from './columnMapping.js';
+import {
+	buildColumnIndex,
+	rowToItem,
+	itemToRow,
+	computeNextItemNumber,
+	buildHeaderRow
+} from './columnMapping.js';
 
 const settings = {
 	columns: {
@@ -114,5 +120,19 @@ describe('computeNextItemNumber', () => {
 	it('returns null when no N° column is configured', () => {
 		const idx = buildColumnIndex(['Nom'], settings);
 		expect(computeNextItemNumber([], idx)).toBeNull();
+	});
+});
+
+describe('buildHeaderRow', () => {
+	it('builds a header row in N°, designation, photo, people, attribution order', () => {
+		expect(buildHeaderRow(settings)).toEqual(['N°', 'Nom', 'Photo', 'Fanny', 'Marion', 'Validation']);
+	});
+
+	it('skips blank/unconfigured columns', () => {
+		const partial = {
+			columns: { itemNumber: '', designation: 'Nom', photo: '', attribution: 'Validation' },
+			people: [{ name: 'Fanny', column: 'Fanny' }]
+		};
+		expect(buildHeaderRow(partial)).toEqual(['Nom', 'Fanny', 'Validation']);
 	});
 });

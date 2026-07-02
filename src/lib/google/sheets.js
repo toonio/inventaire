@@ -50,6 +50,18 @@ export async function updateRow(spreadsheetId, tabName, accessToken, sheetRowNum
 	});
 }
 
+/** Creates a new tab (sheet) in the spreadsheet. Returns { sheetId, title }. */
+export async function createTab(spreadsheetId, accessToken, title) {
+	const url = `${BASE_URL}/${spreadsheetId}:batchUpdate`;
+	const data = await apiFetch(url, accessToken, {
+		method: 'POST',
+		body: JSON.stringify({
+			requests: [{ addSheet: { properties: { title } } }]
+		})
+	});
+	return data.replies[0].addSheet.properties;
+}
+
 /**
  * Deletes a specific row from the sheet, shifting rows below it up.
  * `sheetRowNumber` is 1-based and includes the header row.

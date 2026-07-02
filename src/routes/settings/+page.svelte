@@ -2,12 +2,14 @@
 	import { auth, isSignedIn } from '$lib/stores/auth.svelte.js';
 	import { signIn, signOut } from '$lib/google/auth.js';
 	import { settings, saveSettings, resetColumnMapping } from '$lib/stores/settings.svelte.js';
-	import { listTabs } from '$lib/google/sheets.js';
+	import { listTabs, createTab, updateRow } from '$lib/google/sheets.js';
+	import { buildHeaderRow } from '$lib/columnMapping.js';
 	import { openSpreadsheetPicker } from '$lib/google/picker.js';
 
 	let error = $state('');
 	let loadingTabs = $state(false);
 	let availableTabs = $state([]);
+	let addingTab = $state(false);
 
 	function extractSpreadsheetId(input) {
 		const match = input.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -58,6 +60,32 @@
 		const idx = settings.includedTabs.indexOf(title);
 		if (idx >= 0) settings.includedTabs.splice(idx, 1);
 		else settings.includedTabs.push(title);
+	}
+
+	async function handleAddTab() {
+		const name = prompt('Nom de la nouvelle catégorie / pièce :');
+		if (!name || !name.trim()) return;
+		const title = name.trim();
+		if (availableTabs.some((t) => t.title.toLowerCase() === title.toLowerCase())) {
+			error = `Un onglet « ${title} » existe déjà.`;
+			return;
+		}
+		addingTab = true;
+		error = '';
+		try {
+			const created = await createTab(settings.spreadsheetId, auth.accessToken, title);
+			const headerRow = buildHeaderRow(settings);
+			if (headerRow.length) {
+				await updateRow(settings.spreadsheetId, created.title, auth.accessToken, 1, headerRow);
+			}
+			availableTabs = [...availableTabs, created];
+			if (settings.includedTabs) settings.includedTabs.push(created.title);
+			saveSettings();
+		} catch (err) {
+			error = err.message;
+		} finally {
+			addingTab = false;
+		}
 	}
 
 	function addPerson() {
@@ -137,6 +165,10 @@
 					</label>
 				{/each}
 			</div>
+
+			<button class="btn" onclick={handleAddTab} disabled={addingTab}>
+				{addingTab ? 'Création…' : '+ Ajouter un onglet / une catégorie'}
+			</button>
 		{/if}
 	</div>
 
