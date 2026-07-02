@@ -196,7 +196,7 @@
 
 	<div class="stack">
 		{#each items as entry (entry.rowNumber)}
-			<div class="card">
+			<div class="card" class:attributed={Boolean(entry.item.attribution)}>
 				{#if editingRowNumber === entry.rowNumber}
 					<div class="stack">
 						{#if draft.itemNumber}<p class="muted">N°{draft.itemNumber}</p>{/if}
@@ -269,7 +269,7 @@
 						{/each}
 					</div>
 					{#if entry.item.attribution}
-						<p class="muted">Attribué à : {entry.item.attribution}</p>
+						<p class="attribution-note">Validation : {entry.item.attribution}</p>
 					{/if}
 				{/if}
 			</div>
@@ -286,6 +286,17 @@
 {/if}
 
 <style>
+	.card.attributed {
+		background: #e9dcc4;
+		border-color: #d3b688;
+	}
+
+	.attribution-note {
+		font-weight: 600;
+		color: var(--color-accent);
+		margin: 0.5rem 0 0;
+	}
+
 	.photo-preview {
 		width: 100%;
 		max-height: 220px;
