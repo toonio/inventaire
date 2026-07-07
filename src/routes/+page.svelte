@@ -4,12 +4,17 @@
 	import { personFilter, OTHER_FILTER } from '$lib/stores/personFilter.svelte.js';
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, updateRow, deleteRow } from '$lib/google/sheets.js';
-	import { buildColumnIndex, rowToItem, itemToRow } from '$lib/columnMapping.js';
+	import { buildColumnIndex, rowToItem, itemToRow, isOtherAttribution } from '$lib/columnMapping.js';
 	import { resolvePhotoUrl, extractFileId } from '$lib/google/drive.js';
 	import { deletePreviousPhoto } from '$lib/photoUpload.js';
 	import StarRating from '$lib/components/StarRating.svelte';
 	import PhotoInput from '$lib/components/PhotoInput.svelte';
 	import { base } from '$app/paths';
+
+	/** Extra attribution choice always offered alongside the configured people. */
+	const RESSOURCERIE = 'Ressourcerie';
+	/** Sentinel select value that reveals a free-text input for an arbitrary attribution. */
+	const CUSTOM_ATTRIBUTION = '__custom__';
 
 	let tabs = $state([]);
 	let activeTabTitle = $state('');
@@ -28,6 +33,7 @@
 	let originalPhotoFileId = $state(null);
 	let lightbox = $state(null);
 	let hideAttributed = $state(false);
+	let attributionCustomMode = $state(false);
 
 	/** Identifies an entry across tabs — a plain row number alone can collide between tabs. */
 	function entryKey(entry) {
@@ -125,10 +131,9 @@
 				const tabColumnIndex = buildColumnIndex(data.headers, settings);
 				data.rows.forEach((row, i) => {
 					const item = rowToItem(row, tabColumnIndex);
-					const attribution = item.attribution?.trim().toLowerCase();
 					const matches = isOther
-						? Boolean(attribution) && !knownNames.includes(attribution)
-						: attribution === target;
+						? isOtherAttribution(item.attribution, knownNames)
+						: String(item.attribution ?? '').trim().toLowerCase() === target;
 					if (matches) {
 						results.push({
 							rowNumber: i + 2,
@@ -161,6 +166,8 @@
 		draft = { ...entry.item, desires: { ...entry.item.desires } };
 		draftPhotoPreview = resolvePhotoUrl(entry.item.photo);
 		originalPhotoFileId = extractFileId(entry.item.photo);
+		const knownAttributions = [...settings.people.map((p) => p.name), RESSOURCERIE];
+		attributionCustomMode = Boolean(draft.attribution) && !knownAttributions.includes(draft.attribution);
 	}
 
 	function cancelEdit() {
@@ -168,6 +175,17 @@
 		draft = null;
 		draftPhotoPreview = null;
 		originalPhotoFileId = null;
+		attributionCustomMode = false;
+	}
+
+	function handleAttributionSelect(value) {
+		if (value === CUSTOM_ATTRIBUTION) {
+			attributionCustomMode = true;
+			draft.attribution = '';
+		} else {
+			attributionCustomMode = false;
+			draft.attribution = value;
+		}
 	}
 
 	function handlePhotoChange(result) {
@@ -275,18 +293,25 @@
 				{/each}
 				<div class="field">
 					<label for={`attribution-${idSuffix}`}>Attribution</label>
-					<input
+					<select
 						id={`attribution-${idSuffix}`}
-						list={`attribution-options-${idSuffix}`}
-						bind:value={draft.attribution}
-						placeholder="—"
-					/>
-					<datalist id={`attribution-options-${idSuffix}`}>
+						value={attributionCustomMode ? CUSTOM_ATTRIBUTION : draft.attribution}
+						onchange={(e) => handleAttributionSelect(e.target.value)}
+					>
+						<option value="">—</option>
 						{#each settings.people as person (person.name)}
-							<option value={person.name}></option>
+							<option value={person.name}>{person.name}</option>
 						{/each}
-						<option value="Ressourcerie"></option>
-					</datalist>
+						<option value={RESSOURCERIE}>{RESSOURCERIE}</option>
+						<option value={CUSTOM_ATTRIBUTION}>Autre…</option>
+					</select>
+					{#if attributionCustomMode}
+						<input
+							class="attribution-custom-input"
+							bind:value={draft.attribution}
+							placeholder="Saisir une valeur"
+						/>
+					{/if}
 				</div>
 				<div class="row">
 					<button class="btn btn-primary" onclick={() => saveEdit(entry)}>Enregistrer</button>

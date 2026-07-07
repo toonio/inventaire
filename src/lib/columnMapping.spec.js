@@ -4,7 +4,8 @@ import {
 	rowToItem,
 	itemToRow,
 	computeNextItemNumber,
-	buildHeaderRow
+	buildHeaderRow,
+	isOtherAttribution
 } from './columnMapping.js';
 
 const settings = {
@@ -120,6 +121,31 @@ describe('computeNextItemNumber', () => {
 	it('returns null when no N° column is configured', () => {
 		const idx = buildColumnIndex(['Nom'], settings);
 		expect(computeNextItemNumber([], idx)).toBeNull();
+	});
+});
+
+describe('isOtherAttribution', () => {
+	const knownNames = ['fanny', 'marion'];
+
+	it('excludes a blank attribution', () => {
+		expect(isOtherAttribution('', knownNames)).toBe(false);
+		expect(isOtherAttribution('   ', knownNames)).toBe(false);
+		expect(isOtherAttribution(undefined, knownNames)).toBe(false);
+		expect(isOtherAttribution(null, knownNames)).toBe(false);
+	});
+
+	it('excludes an attribution matching a known person, regardless of case', () => {
+		expect(isOtherAttribution('Fanny', knownNames)).toBe(false);
+		expect(isOtherAttribution('MARION', knownNames)).toBe(false);
+	});
+
+	it('includes an attribution outside the known list, e.g. Ressourcerie', () => {
+		expect(isOtherAttribution('Ressourcerie', knownNames)).toBe(true);
+	});
+
+	it('does not throw when the cell holds a non-string value', () => {
+		expect(isOtherAttribution(0, knownNames)).toBe(true);
+		expect(isOtherAttribution(false, knownNames)).toBe(true);
 	});
 });
 

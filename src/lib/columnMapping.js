@@ -60,6 +60,16 @@ export function itemToRow(item, columnIndex, headerCount, existingRow = []) {
 }
 
 /**
+ * True when an attribution is set but doesn't match any of the configured
+ * person names — used by the "Autres" filter. A blank attribution never
+ * matches, regardless of the known-names list.
+ */
+export function isOtherAttribution(attribution, knownNames) {
+	const normalized = String(attribution ?? '').trim().toLowerCase();
+	return normalized.length > 0 && !knownNames.includes(normalized);
+}
+
+/**
  * Computes the next sequential item number for a tab from the highest
  * existing numeric N° value, so adding an item doesn't require typing one
  * in manually. Returns null if the tab has no N° column configured.
