@@ -21,7 +21,7 @@
 			designation: '',
 			photo: '',
 			attribution: '',
-			desires: Object.fromEntries(settings.people.map((p) => [p.name, 0]))
+			desires: Object.fromEntries(settings.people.map((p) => [p.name, '']))
 		};
 	}
 
