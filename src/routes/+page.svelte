@@ -1,7 +1,7 @@
 <script>
 	import { auth, isSignedIn } from '$lib/stores/auth.svelte.js';
 	import { settings, isConfigured } from '$lib/stores/settings.svelte.js';
-	import { personFilter } from '$lib/stores/personFilter.svelte.js';
+	import { personFilter, OTHER_FILTER } from '$lib/stores/personFilter.svelte.js';
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, updateRow, deleteRow } from '$lib/google/sheets.js';
 	import { buildColumnIndex, rowToItem, itemToRow } from '$lib/columnMapping.js';
@@ -34,6 +34,9 @@
 		return `${entry.tabTitle}::${entry.rowNumber}`;
 	}
 
+	const personFilterLabel = $derived(
+		personFilter.name === OTHER_FILTER ? 'une autre personne' : personFilter.name
+	);
 	const activeSheetId = $derived(tabs.find((t) => t.title === activeTabTitle)?.sheetId ?? null);
 	const columnIndex = $derived(buildColumnIndex(headers, settings));
 	const items = $derived(
@@ -99,13 +102,15 @@
 		}
 	}
 
-	/** Scans every visible tab for items whose Validation cell matches the selected person. */
+	/** Scans every visible tab for items whose Validation cell matches the selected person, or falls outside the configured person list when the "Autres" filter is active. */
 	async function loadPersonItems() {
-		const target = personFilter.name?.trim().toLowerCase();
-		if (!target) {
+		const isOther = personFilter.name === OTHER_FILTER;
+		const target = isOther ? null : personFilter.name?.trim().toLowerCase();
+		if (!isOther && !target) {
 			personEntries = [];
 			return;
 		}
+		const knownNames = settings.people.map((p) => p.name.trim().toLowerCase());
 		personLoading = true;
 		personError = '';
 		try {
@@ -120,7 +125,11 @@
 				const tabColumnIndex = buildColumnIndex(data.headers, settings);
 				data.rows.forEach((row, i) => {
 					const item = rowToItem(row, tabColumnIndex);
-					if (item.attribution && item.attribution.trim().toLowerCase() === target) {
+					const attribution = item.attribution?.trim().toLowerCase();
+					const matches = isOther
+						? Boolean(attribution) && !knownNames.includes(attribution)
+						: attribution === target;
+					if (matches) {
 						results.push({
 							rowNumber: i + 2,
 							row,
@@ -266,12 +275,18 @@
 				{/each}
 				<div class="field">
 					<label for={`attribution-${idSuffix}`}>Attribution</label>
-					<select id={`attribution-${idSuffix}`} bind:value={draft.attribution}>
-						<option value="">—</option>
+					<input
+						id={`attribution-${idSuffix}`}
+						list={`attribution-options-${idSuffix}`}
+						bind:value={draft.attribution}
+						placeholder="—"
+					/>
+					<datalist id={`attribution-options-${idSuffix}`}>
 						{#each settings.people as person (person.name)}
-							<option value={person.name}>{person.name}</option>
+							<option value={person.name}></option>
 						{/each}
-					</select>
+						<option value="Ressourcerie"></option>
+					</datalist>
 				</div>
 				<div class="row">
 					<button class="btn btn-primary" onclick={() => saveEdit(entry)}>Enregistrer</button>
@@ -337,14 +352,14 @@
 	{#if personError}<p class="error-banner">{personError}</p>{/if}
 	{#if personLoading}<p class="muted">Chargement…</p>{/if}
 
-	<p class="muted">Objets attribués à {personFilter.name}.</p>
+	<p class="muted">Objets attribués à {personFilterLabel}.</p>
 
 	<div class="stack">
 		{#each personEntries as entry (entryKey(entry))}
 			{@render itemCard(entry, true)}
 		{:else}
 			{#if !personLoading}
-				<p class="muted">Aucun objet attribué à {personFilter.name}.</p>
+				<p class="muted">Aucun objet attribué à {personFilterLabel}.</p>
 			{/if}
 		{/each}
 	</div>

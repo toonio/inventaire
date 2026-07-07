@@ -5,7 +5,12 @@
 	import { auth, isSignedIn } from '$lib/stores/auth.svelte.js';
 	import { signIn, signOut } from '$lib/google/auth.js';
 	import { settings, saveSettings, isConfigured } from '$lib/stores/settings.svelte.js';
-	import { personFilter, setPersonFilter, clearPersonFilter } from '$lib/stores/personFilter.svelte.js';
+	import {
+		personFilter,
+		setPersonFilter,
+		clearPersonFilter,
+		OTHER_FILTER
+	} from '$lib/stores/personFilter.svelte.js';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 
@@ -65,7 +70,11 @@
 					aria-expanded={titleMenuOpen}
 				>
 					<span class="app-title">Inventaire</span>
-					{#if personFilter.name}<span class="muted">— {personFilter.name}</span>{/if}
+					{#if personFilter.name}
+						<span class="muted"
+							>— {personFilter.name === OTHER_FILTER ? 'Autres' : personFilter.name}</span
+						>
+					{/if}
 					<span class="caret">▾</span>
 				</button>
 				{#if titleMenuOpen}
@@ -88,6 +97,14 @@
 								{person.name}
 							</button>
 						{/each}
+						<button
+							type="button"
+							class="dropdown-item"
+							class:active={personFilter.name === OTHER_FILTER}
+							onclick={() => selectPerson(OTHER_FILTER)}
+						>
+							Autres
+						</button>
 					</div>
 				{/if}
 			{:else}
