@@ -82,9 +82,12 @@
 
 <style>
 	.photo-preview {
+		display: block;
 		width: 100%;
-		max-height: 260px;
-		object-fit: cover;
+		height: auto;
+		max-height: 320px;
+		object-fit: contain;
+		background: var(--color-bg);
 		border-radius: var(--radius, 12px);
 	}
 </style>

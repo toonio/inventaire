@@ -463,9 +463,12 @@
 	}
 
 	.photo-preview {
+		display: block;
 		width: 100%;
-		max-height: 220px;
-		object-fit: cover;
+		height: auto;
+		max-height: 320px;
+		object-fit: contain;
+		background: var(--color-bg);
 		border-radius: var(--radius, 12px);
 		margin-bottom: 0.75rem;
 	}
