@@ -4,7 +4,13 @@
 	import { personFilter, OTHER_FILTER } from '$lib/stores/personFilter.svelte.js';
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, updateRow, deleteRow } from '$lib/google/sheets.js';
-	import { buildColumnIndex, rowToItem, itemToRow, isOtherAttribution } from '$lib/columnMapping.js';
+	import {
+		buildColumnIndex,
+		rowToItem,
+		itemToRow,
+		isOtherAttribution,
+		isUnratedDesire
+	} from '$lib/columnMapping.js';
 	import { resolvePhotoUrl, extractFileId } from '$lib/google/drive.js';
 	import { deletePreviousPhoto } from '$lib/photoUpload.js';
 	import StarRating from '$lib/components/StarRating.svelte';
@@ -61,6 +67,17 @@
 			(entry) => !hideAttributed || !entry.item.attribution || entryKey(entry) === editingEntryKey
 		)
 	);
+	/** "Attribués" scans every tab and shows a flat list; "Non traités" also scans every tab but is narrowed down to one tab at a time via the tab bar. */
+	const isAttributionFilterActive = $derived(
+		Boolean(personFilter.name) && personFilter.mode !== 'unreviewed'
+	);
+	const isUnreviewedFilterActive = $derived(
+		Boolean(personFilter.name) && personFilter.mode === 'unreviewed'
+	);
+	const isCrossTabFilterActive = $derived(Boolean(personFilter.name));
+	const unreviewedTabEntries = $derived(
+		personEntries.filter((entry) => entry.tabTitle === activeTabTitle)
+	);
 
 	$effect(() => {
 		if (isSignedIn() && isConfigured()) {
@@ -71,7 +88,7 @@
 	});
 
 	$effect(() => {
-		if (isSignedIn() && isConfigured() && personFilter.name) {
+		if (isSignedIn() && isConfigured() && isCrossTabFilterActive) {
 			loadPersonItems();
 		} else {
 			personEntries = [];
@@ -108,11 +125,17 @@
 		}
 	}
 
-	/** Scans every visible tab for items whose Validation cell matches the selected person, or falls outside the configured person list when the "Autres" filter is active. */
+	/**
+	 * Scans every visible tab for items matching the active header-menu filter:
+	 * "Attribués" matches the Validation cell against the selected person (or
+	 * anyone outside the configured person list, for "Autres"); "Non traités"
+	 * matches unattributed items where that person hasn't rated their desire yet.
+	 */
 	async function loadPersonItems() {
-		const isOther = personFilter.name === OTHER_FILTER;
-		const target = isOther ? null : personFilter.name?.trim().toLowerCase();
-		if (!isOther && !target) {
+		const isUnreviewed = personFilter.mode === 'unreviewed';
+		const isOther = !isUnreviewed && personFilter.name === OTHER_FILTER;
+		const target = !isUnreviewed && !isOther ? personFilter.name?.trim().toLowerCase() : null;
+		if (!isUnreviewed && !isOther && !target) {
 			personEntries = [];
 			return;
 		}
@@ -126,14 +149,22 @@
 				tabs = tabList;
 			}
 			const results = [];
+			const unresolvedTabs = [];
 			for (const tab of tabList) {
 				const data = await getTabData(settings.spreadsheetId, tab.title, auth.accessToken);
 				const tabColumnIndex = buildColumnIndex(data.headers, settings);
+				if (isUnreviewed) {
+					const desireIndex = tabColumnIndex.desires.find((d) => d.name === personFilter.name)?.index;
+					if (desireIndex === undefined || desireIndex === -1) unresolvedTabs.push(tab.title);
+				}
 				data.rows.forEach((row, i) => {
 					const item = rowToItem(row, tabColumnIndex);
-					const matches = isOther
-						? isOtherAttribution(item.attribution, knownNames)
-						: String(item.attribution ?? '').trim().toLowerCase() === target;
+					const matches = isUnreviewed
+						? isUnratedDesire(item.desires[personFilter.name]) &&
+							!String(item.attribution ?? '').trim()
+						: isOther
+							? isOtherAttribution(item.attribution, knownNames)
+							: String(item.attribution ?? '').trim().toLowerCase() === target;
 					if (matches) {
 						results.push({
 							rowNumber: i + 2,
@@ -147,6 +178,10 @@
 					}
 				});
 			}
+			if (unresolvedTabs.length) {
+				const columnName = settings.people.find((p) => p.name === personFilter.name)?.column;
+				personError = `Colonne « ${columnName} » introuvable dans : ${unresolvedTabs.join(', ')}. Ces onglets ne peuvent pas être filtrés — tous leurs objets apparaissent comme non traités.`;
+			}
 			personEntries = results;
 		} catch (err) {
 			personError = err.message;
@@ -158,7 +193,9 @@
 	function selectTab(title) {
 		activeTabTitle = title;
 		editingEntryKey = null;
-		loadTabData(title);
+		if (!isUnreviewedFilterActive) {
+			loadTabData(title);
+		}
 	}
 
 	function startEdit(entry) {
@@ -194,7 +231,7 @@
 	}
 
 	async function refreshAfterMutation() {
-		if (personFilter.name) {
+		if (isCrossTabFilterActive) {
 			await loadPersonItems();
 		} else {
 			await loadTabData(activeTabTitle);
@@ -241,7 +278,7 @@
 		const updatedItem = { ...entry.item, desires: { ...entry.item.desires, [personName]: value } };
 		const newRow = itemToRow(updatedItem, entry.columnIndex, entry.headerCount, entry.row);
 		const previousRow = entry.row;
-		const list = personFilter.name ? personEntries : null;
+		const list = isCrossTabFilterActive ? personEntries : null;
 		const idx = list ? list.findIndex((e) => entryKey(e) === entryKey(entry)) : entry.rowNumber - 2;
 		if (list) {
 			if (idx !== -1) list[idx] = { ...entry, row: newRow, item: updatedItem };
@@ -373,7 +410,7 @@
 		Aucun classeur configuré. Rendez-vous dans <a href="{base}/settings">Réglages</a> pour indiquer
 		le classeur à utiliser.
 	</p>
-{:else if personFilter.name}
+{:else if isAttributionFilterActive}
 	{#if personError}<p class="error-banner">{personError}</p>{/if}
 	{#if personLoading}<p class="muted">Chargement…</p>{/if}
 
@@ -385,6 +422,36 @@
 		{:else}
 			{#if !personLoading}
 				<p class="muted">Aucun objet attribué à {personFilterLabel}.</p>
+			{/if}
+		{/each}
+	</div>
+{:else if isUnreviewedFilterActive}
+	{#if personError}<p class="error-banner">{personError}</p>{/if}
+
+	{#if tabs.length}
+		<div class="tabs">
+			{#each tabs as tab (tab.sheetId)}
+				<button
+					type="button"
+					class="tab-chip"
+					class:active={tab.title === activeTabTitle}
+					onclick={() => selectTab(tab.title)}
+				>
+					{tab.title}
+				</button>
+			{/each}
+		</div>
+	{/if}
+
+	<p class="muted">Objets non traités par {personFilter.name}.</p>
+	{#if personLoading}<p class="muted">Chargement…</p>{/if}
+
+	<div class="stack">
+		{#each unreviewedTabEntries as entry (entryKey(entry))}
+			{@render itemCard(entry, false)}
+		{:else}
+			{#if !personLoading}
+				<p class="muted">Tous les objets de cet onglet ont été traités par {personFilter.name}.</p>
 			{/if}
 		{/each}
 	</div>

@@ -132,6 +132,34 @@ a {
 	font-weight: 600;
 }
 
+.dropdown-submenu-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.4rem;
+}
+
+.dropdown-submenu {
+	display: flex;
+	flex-direction: column;
+	margin: 0.15rem 0 0.15rem 0.5rem;
+	padding-left: 0.5rem;
+	border-left: 2px solid var(--color-border);
+}
+
+.dropdown-item-with-count {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+}
+
+.count-label {
+	font-size: 0.8rem;
+	opacity: 0.65;
+	flex-shrink: 0;
+}
+
 .app-main {
 	flex: 1;
 	padding: 1rem;

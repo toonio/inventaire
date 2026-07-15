@@ -7,10 +7,12 @@
 	import { settings, saveSettings, isConfigured } from '$lib/stores/settings.svelte.js';
 	import {
 		personFilter,
-		setPersonFilter,
+		setAttributionFilter,
+		setUnreviewedFilter,
 		clearPersonFilter,
 		OTHER_FILTER
 	} from '$lib/stores/personFilter.svelte.js';
+	import { getReviewCounts } from '$lib/inventory.js';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 
@@ -22,6 +24,9 @@
 
 	let authError = $state('');
 	let titleMenuOpen = $state(false);
+	let openSubmenu = $state(null);
+	let reviewCounts = $state(null);
+	let reviewCountsLoading = $state(false);
 
 	async function handleAuthClick() {
 		authError = '';
@@ -36,15 +41,39 @@
 		}
 	}
 
-	function selectPerson(name) {
-		setPersonFilter(name);
+	function selectAttributed(name) {
+		setAttributionFilter(name);
 		titleMenuOpen = false;
+		openSubmenu = null;
+		goto(`${base}/`);
+	}
+
+	function selectUnreviewed(name) {
+		setUnreviewedFilter(name);
+		titleMenuOpen = false;
+		openSubmenu = null;
 		goto(`${base}/`);
 	}
 
 	function selectAllItems() {
 		clearPersonFilter();
 		titleMenuOpen = false;
+		openSubmenu = null;
+	}
+
+	async function toggleSubmenu(key) {
+		const wasOpen = openSubmenu === key;
+		openSubmenu = wasOpen ? null : key;
+		if (!wasOpen && key === 'unreviewed') {
+			reviewCountsLoading = true;
+			try {
+				reviewCounts = await getReviewCounts(auth.accessToken);
+			} catch {
+				reviewCounts = null;
+			} finally {
+				reviewCountsLoading = false;
+			}
+		}
 	}
 </script>
 
@@ -53,7 +82,12 @@
 	<title>Inventaire</title>
 </svelte:head>
 
-<svelte:window onclick={() => (titleMenuOpen = false)} />
+<svelte:window
+	onclick={() => {
+		titleMenuOpen = false;
+		openSubmenu = null;
+	}}
+/>
 
 <div class="app-shell">
 	<header class="app-header">
@@ -71,9 +105,14 @@
 				>
 					<span class="app-title">Inventaire</span>
 					{#if personFilter.name}
-						<span class="muted"
-							>— {personFilter.name === OTHER_FILTER ? 'Autres' : personFilter.name}</span
-						>
+						<span class="muted">
+							—
+							{#if personFilter.mode === 'unreviewed'}
+								Non traités : {personFilter.name}
+							{:else}
+								{personFilter.name === OTHER_FILTER ? 'Autres' : personFilter.name}
+							{/if}
+						</span>
 					{/if}
 					<span class="caret">▾</span>
 				</button>
@@ -87,24 +126,74 @@
 						>
 							Tous les objets
 						</button>
-						{#each settings.people as person (person.name)}
-							<button
-								type="button"
-								class="dropdown-item"
-								class:active={personFilter.name === person.name}
-								onclick={() => selectPerson(person.name)}
-							>
-								{person.name}
-							</button>
-						{/each}
+
 						<button
 							type="button"
-							class="dropdown-item"
-							class:active={personFilter.name === OTHER_FILTER}
-							onclick={() => selectPerson(OTHER_FILTER)}
+							class="dropdown-item dropdown-submenu-toggle"
+							aria-haspopup="true"
+							aria-expanded={openSubmenu === 'attributed'}
+							onclick={() => toggleSubmenu('attributed')}
 						>
-							Autres
+							Attribués
+							<span class="caret">{openSubmenu === 'attributed' ? '▴' : '▾'}</span>
 						</button>
+						{#if openSubmenu === 'attributed'}
+							<div class="dropdown-submenu">
+								{#each settings.people as person (person.name)}
+									<button
+										type="button"
+										class="dropdown-item"
+										class:active={personFilter.mode === 'attributed' &&
+											personFilter.name === person.name}
+										onclick={() => selectAttributed(person.name)}
+									>
+										{person.name}
+									</button>
+								{/each}
+								<button
+									type="button"
+									class="dropdown-item"
+									class:active={personFilter.mode === 'attributed' &&
+										personFilter.name === OTHER_FILTER}
+									onclick={() => selectAttributed(OTHER_FILTER)}
+								>
+									Autres
+								</button>
+							</div>
+						{/if}
+
+						<button
+							type="button"
+							class="dropdown-item dropdown-submenu-toggle"
+							aria-haspopup="true"
+							aria-expanded={openSubmenu === 'unreviewed'}
+							onclick={() => toggleSubmenu('unreviewed')}
+						>
+							Non traités
+							<span class="caret">{openSubmenu === 'unreviewed' ? '▴' : '▾'}</span>
+						</button>
+						{#if openSubmenu === 'unreviewed'}
+							<div class="dropdown-submenu">
+								{#each settings.people as person (person.name)}
+									<button
+										type="button"
+										class="dropdown-item dropdown-item-with-count"
+										class:active={personFilter.mode === 'unreviewed' &&
+											personFilter.name === person.name}
+										onclick={() => selectUnreviewed(person.name)}
+									>
+										<span>{person.name}</span>
+										<span class="count-label">
+											{#if reviewCounts}
+												({reviewCounts.total - reviewCounts.byPerson[person.name] ?? 0}/{reviewCounts.total})
+											{:else if reviewCountsLoading}
+												…
+											{/if}
+										</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				{/if}
 			{:else}

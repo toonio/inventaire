@@ -70,6 +70,15 @@ export function isOtherAttribution(attribution, knownNames) {
 }
 
 /**
+ * True when a desire cell has never been rated. A 0-star rating is an
+ * explicit "no interest" review and must NOT count as unrated — mirrors
+ * StarRating's own isSet check.
+ */
+export function isUnratedDesire(value) {
+	return value === '' || value === null || value === undefined;
+}
+
+/**
  * Computes the next sequential item number for a tab from the highest
  * existing numeric N° value, so adding an item doesn't require typing one
  * in manually. Returns null if the tab has no N° column configured.
