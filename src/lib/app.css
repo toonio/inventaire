@@ -147,17 +147,57 @@ a {
 	border-left: 2px solid var(--color-border);
 }
 
-.dropdown-item-with-count {
+.recap-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.5);
+	padding: 1rem;
+}
+
+.recap-card {
+	width: 100%;
+	max-width: 22rem;
+	max-height: 80vh;
+	overflow-y: auto;
+	background: var(--color-surface);
+	border-radius: var(--radius);
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+	padding: 1rem;
+}
+
+.recap-card h2 {
+	margin: 0 0 0.75rem;
+	font-size: 1.05rem;
+}
+
+.recap-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 0.5rem;
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--color-border);
 }
 
-.count-label {
-	font-size: 0.8rem;
-	opacity: 0.65;
+.recap-row:last-child {
+	border-bottom: none;
+}
+
+.recap-count {
+	font-size: 0.9rem;
+	color: var(--color-muted);
 	flex-shrink: 0;
+}
+
+.recap-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1rem;
 }
 
 .app-main {

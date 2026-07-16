@@ -25,8 +25,10 @@
 	let authError = $state('');
 	let titleMenuOpen = $state(false);
 	let openSubmenu = $state(null);
+	let recapOpen = $state(false);
 	let reviewCounts = $state(null);
 	let reviewCountsLoading = $state(false);
+	let reviewCountsError = $state('');
 
 	async function handleAuthClick() {
 		authError = '';
@@ -61,19 +63,32 @@
 		openSubmenu = null;
 	}
 
-	async function toggleSubmenu(key) {
-		const wasOpen = openSubmenu === key;
-		openSubmenu = wasOpen ? null : key;
-		if (!wasOpen && key === 'unreviewed') {
-			reviewCountsLoading = true;
-			try {
-				reviewCounts = await getReviewCounts(auth.accessToken);
-			} catch {
-				reviewCounts = null;
-			} finally {
-				reviewCountsLoading = false;
-			}
+	function toggleSubmenu(key) {
+		openSubmenu = openSubmenu === key ? null : key;
+	}
+
+	/** Fetches the per-person rated/total counts on demand — kept out of the header menu itself so opening "Non traités" doesn't cost an API call per tab every time. */
+	async function loadReviewCounts() {
+		reviewCountsLoading = true;
+		reviewCountsError = '';
+		try {
+			reviewCounts = await getReviewCounts(auth.accessToken);
+		} catch (err) {
+			reviewCountsError = err.message;
+		} finally {
+			reviewCountsLoading = false;
 		}
+	}
+
+	function openRecap() {
+		titleMenuOpen = false;
+		openSubmenu = null;
+		recapOpen = true;
+		if (!reviewCounts) loadReviewCounts();
+	}
+
+	function closeRecap() {
+		recapOpen = false;
 	}
 </script>
 
@@ -177,23 +192,20 @@
 								{#each settings.people as person (person.name)}
 									<button
 										type="button"
-										class="dropdown-item dropdown-item-with-count"
+										class="dropdown-item"
 										class:active={personFilter.mode === 'unreviewed' &&
 											personFilter.name === person.name}
 										onclick={() => selectUnreviewed(person.name)}
 									>
-										<span>{person.name}</span>
-										<span class="count-label">
-											{#if reviewCounts}
-												({reviewCounts.total - reviewCounts.byPerson[person.name] ?? 0}/{reviewCounts.total})
-											{:else if reviewCountsLoading}
-												…
-											{/if}
-										</span>
+										{person.name}
 									</button>
 								{/each}
 							</div>
 						{/if}
+
+						<button type="button" class="dropdown-item" onclick={openRecap}>
+							Récapitulatif
+						</button>
 					</div>
 				{/if}
 			{:else}
@@ -219,3 +231,32 @@
 
 	<BottomNav />
 </div>
+
+{#if recapOpen}
+	<div class="recap-overlay" onclick={closeRecap} role="presentation">
+		<div class="recap-card" onclick={(e) => e.stopPropagation()} role="presentation">
+			<h2>Récapitulatif des avis</h2>
+			{#if reviewCountsError}
+				<p class="error-banner">{reviewCountsError}</p>
+			{:else if reviewCountsLoading}
+				<p class="muted">Chargement…</p>
+			{:else if reviewCounts}
+				{#each settings.people as person (person.name)}
+					<div class="recap-row">
+						<span>{person.name}</span>
+						<span class="recap-count">
+							{reviewCounts.total - (reviewCounts.byPerson[person.name] ?? 0)}/{reviewCounts.total}
+							non traités
+						</span>
+					</div>
+				{/each}
+			{/if}
+			<div class="recap-actions">
+				<button type="button" class="btn" onclick={loadReviewCounts} disabled={reviewCountsLoading}>
+					Actualiser
+				</button>
+				<button type="button" class="btn btn-primary" onclick={closeRecap}>Fermer</button>
+			</div>
+		</div>
+	</div>
+{/if}
