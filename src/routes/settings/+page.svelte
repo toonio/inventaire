@@ -4,6 +4,7 @@
 	import { settings, saveSettings, resetColumnMapping } from '$lib/stores/settings.svelte.js';
 	import { listTabs, createTab, updateRow } from '$lib/google/sheets.js';
 	import { buildHeaderRow } from '$lib/columnMapping.js';
+	import { defaultIncludedTabTitles } from '$lib/inventory.js';
 	import { openSpreadsheetPicker } from '$lib/google/picker.js';
 
 	let error = $state('');
@@ -46,7 +47,7 @@
 		try {
 			availableTabs = await listTabs(settings.spreadsheetId, auth.accessToken);
 			if (!settings.includedTabs) {
-				settings.includedTabs = availableTabs.map((t) => t.title);
+				settings.includedTabs = defaultIncludedTabTitles(availableTabs);
 			}
 		} catch (err) {
 			error = err.message;
@@ -56,7 +57,7 @@
 	}
 
 	function toggleTab(title) {
-		if (!settings.includedTabs) settings.includedTabs = availableTabs.map((t) => t.title);
+		if (!settings.includedTabs) settings.includedTabs = defaultIncludedTabTitles(availableTabs);
 		const idx = settings.includedTabs.indexOf(title);
 		if (idx >= 0) settings.includedTabs.splice(idx, 1);
 		else settings.includedTabs.push(title);
@@ -153,7 +154,7 @@
 
 		{#if availableTabs.length}
 			<div class="stack">
-				<span class="muted">Onglets à afficher (tous par défaut) :</span>
+				<span class="muted">Onglets à afficher (tous sauf les deux derniers par défaut) :</span>
 				{#each availableTabs as tab (tab.sheetId)}
 					<label class="row">
 						<input
