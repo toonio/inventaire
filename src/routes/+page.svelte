@@ -2,6 +2,7 @@
 	import { auth, isSignedIn } from '$lib/stores/auth.svelte.js';
 	import { settings, isConfigured } from '$lib/stores/settings.svelte.js';
 	import { personFilter, OTHER_FILTER } from '$lib/stores/personFilter.svelte.js';
+	import { refresh } from '$lib/stores/refresh.svelte.js';
 	import { getVisibleTabs } from '$lib/inventory.js';
 	import { getTabData, updateRow, deleteRow } from '$lib/google/sheets.js';
 	import {
@@ -13,6 +14,7 @@
 	} from '$lib/columnMapping.js';
 	import { resolvePhotoUrl, extractFileId } from '$lib/google/drive.js';
 	import { deletePreviousPhoto } from '$lib/photoUpload.js';
+	import { CATALOGUE_ATTRIBUTION } from '$lib/autoAttribution.js';
 	import StarRating from '$lib/components/StarRating.svelte';
 	import PhotoInput from '$lib/components/PhotoInput.svelte';
 	import { base } from '$app/paths';
@@ -79,7 +81,10 @@
 		personEntries.filter((entry) => entry.tabTitle === activeTabTitle)
 	);
 
+	// Reading refresh.token subscribes the listing to spreadsheet changes made
+	// elsewhere (the header menu's auto-attribution pass), so it reloads.
 	$effect(() => {
+		void refresh.token;
 		if (isSignedIn() && isConfigured()) {
 			loadTabs();
 		} else {
@@ -88,6 +93,7 @@
 	});
 
 	$effect(() => {
+		void refresh.token;
 		if (isSignedIn() && isConfigured() && isCrossTabFilterActive) {
 			loadPersonItems();
 		} else {
@@ -203,7 +209,11 @@
 		draft = { ...entry.item, desires: { ...entry.item.desires } };
 		draftPhotoPreview = resolvePhotoUrl(entry.item.photo);
 		originalPhotoFileId = extractFileId(entry.item.photo);
-		const knownAttributions = [...settings.people.map((p) => p.name), RESSOURCERIE];
+		const knownAttributions = [
+			...settings.people.map((p) => p.name),
+			RESSOURCERIE,
+			CATALOGUE_ATTRIBUTION
+		];
 		attributionCustomMode = Boolean(draft.attribution) && !knownAttributions.includes(draft.attribution);
 	}
 
@@ -340,6 +350,7 @@
 							<option value={person.name}>{person.name}</option>
 						{/each}
 						<option value={RESSOURCERIE}>{RESSOURCERIE}</option>
+						<option value={CATALOGUE_ATTRIBUTION}>Catalogue des dons</option>
 						<option value={CUSTOM_ATTRIBUTION}>Autre…</option>
 					</select>
 					{#if attributionCustomMode}

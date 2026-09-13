@@ -86,3 +86,29 @@ export async function deleteRow(spreadsheetId, sheetId, accessToken, sheetRowNum
 		})
 	});
 }
+
+/** Converts a 0-based column index into its A1 letter (0 -> A, 26 -> AA). */
+export function columnLetter(index) {
+	let n = index + 1;
+	let letters = '';
+	while (n > 0) {
+		const remainder = (n - 1) % 26;
+		letters = String.fromCharCode(65 + remainder) + letters;
+		n = Math.floor((n - 1) / 26);
+	}
+	return letters;
+}
+
+/**
+ * Writes several individual ranges in a single request — used by the
+ * auto-attribution pass, which touches one cell on many rows across tabs and
+ * would otherwise need one API call per item.
+ * `data` is [{ range, values }] in A1 notation.
+ */
+export async function batchUpdateValues(spreadsheetId, accessToken, data) {
+	const url = `${BASE_URL}/${spreadsheetId}/values:batchUpdate`;
+	return apiFetch(url, accessToken, {
+		method: 'POST',
+		body: JSON.stringify({ valueInputOption: 'USER_ENTERED', data })
+	});
+}

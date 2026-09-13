@@ -13,6 +13,12 @@
 		OTHER_FILTER
 	} from '$lib/stores/personFilter.svelte.js';
 	import { getReviewCounts } from '$lib/inventory.js';
+	import {
+		planAutoAttributions,
+		applyAutoAttributions,
+		CATALOGUE_ATTRIBUTION
+	} from '$lib/autoAttribution.js';
+	import { requestRefresh } from '$lib/stores/refresh.svelte.js';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 
@@ -89,6 +95,60 @@
 
 	function closeRecap() {
 		recapOpen = false;
+	}
+
+	let autoOpen = $state(false);
+	let autoScanning = $state(false);
+	let autoApplying = $state(false);
+	let autoError = $state('');
+	let autoPlan = $state(null);
+	let autoApplied = $state(null);
+
+	const autoCatalogueCount = $derived(
+		autoPlan?.plan.filter((e) => e.attribution === CATALOGUE_ATTRIBUTION).length ?? 0
+	);
+	const autoPersonCount = $derived((autoPlan?.plan.length ?? 0) - autoCatalogueCount);
+
+	/**
+	 * Scans the whole inventory and proposes the attributions that can be
+	 * settled without arbitration — nothing is written until the user
+	 * confirms.
+	 */
+	async function openAutoAttribution() {
+		titleMenuOpen = false;
+		openSubmenu = null;
+		autoOpen = true;
+		autoPlan = null;
+		autoApplied = null;
+		autoError = '';
+		autoScanning = true;
+		try {
+			autoPlan = await planAutoAttributions(auth.accessToken);
+		} catch (err) {
+			autoError = err.message;
+		} finally {
+			autoScanning = false;
+		}
+	}
+
+	async function confirmAutoAttribution() {
+		autoApplying = true;
+		autoError = '';
+		try {
+			const count = await applyAutoAttributions(autoPlan.plan, auth.accessToken);
+			autoApplied = count;
+			autoPlan = null;
+			reviewCounts = null;
+			requestRefresh();
+		} catch (err) {
+			autoError = err.message;
+		} finally {
+			autoApplying = false;
+		}
+	}
+
+	function closeAutoAttribution() {
+		autoOpen = false;
 	}
 </script>
 
@@ -206,6 +266,10 @@
 						<button type="button" class="dropdown-item" onclick={openRecap}>
 							Récapitulatif
 						</button>
+
+						<button type="button" class="dropdown-item" onclick={openAutoAttribution}>
+							Auto-attribution
+						</button>
 					</div>
 				{/if}
 			{:else}
@@ -256,6 +320,75 @@
 					Actualiser
 				</button>
 				<button type="button" class="btn btn-primary" onclick={closeRecap}>Fermer</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if autoOpen}
+	<div
+		class="recap-overlay"
+		onclick={() => !autoApplying && closeAutoAttribution()}
+		role="presentation"
+	>
+		<div class="recap-card" onclick={(e) => e.stopPropagation()} role="presentation">
+			<h2>Auto-attribution</h2>
+			{#if autoError}<p class="error-banner">{autoError}</p>{/if}
+
+			{#if autoScanning}
+				<p class="muted">Analyse de l'inventaire…</p>
+			{:else if autoApplied !== null}
+				<p>
+					{autoApplied} objet{autoApplied > 1 ? 's' : ''} attribué{autoApplied > 1 ? 's' : ''}.
+				</p>
+			{:else if autoPlan}
+				{#each autoPlan.warnings as warning (warning)}
+					<p class="error-banner">{warning}</p>
+				{/each}
+				{#if autoPlan.plan.length === 0}
+					<p class="muted">
+						Aucun objet à attribuer automatiquement ({autoPlan.scanned} objets analysés).
+					</p>
+				{:else}
+					<p class="muted">
+						{autoPlan.plan.length} objet{autoPlan.plan.length > 1 ? 's' : ''} sur {autoPlan.scanned}
+						: {autoCatalogueCount} vers le catalogue des dons, {autoPersonCount} vers une personne.
+						Les objets non notés par tout le monde et ceux voulus par plusieurs personnes sont
+						laissés de côté.
+					</p>
+					<div class="auto-plan-list">
+						{#each autoPlan.plan as entry (`${entry.tabTitle}::${entry.rowNumber}`)}
+							<div class="recap-row">
+								<span>
+									<span class="muted">{entry.tabTitle} ·</span>
+									{#if entry.itemNumber}<span class="muted">N°{entry.itemNumber} —</span>{/if}
+									{entry.designation || '(sans désignation)'}
+								</span>
+								<span class="recap-count">{entry.attribution}</span>
+							</div>
+						{/each}
+					</div>
+				{/if}
+			{/if}
+
+			<div class="recap-actions">
+				{#if autoPlan?.plan.length && autoApplied === null}
+					<button type="button" class="btn" onclick={closeAutoAttribution} disabled={autoApplying}>
+						Annuler
+					</button>
+					<button
+						type="button"
+						class="btn btn-primary"
+						onclick={confirmAutoAttribution}
+						disabled={autoApplying}
+					>
+						{autoApplying ? 'Attribution…' : 'Appliquer'}
+					</button>
+				{:else}
+					<button type="button" class="btn btn-primary" onclick={closeAutoAttribution}>
+						Fermer
+					</button>
+				{/if}
 			</div>
 		</div>
 	</div>
