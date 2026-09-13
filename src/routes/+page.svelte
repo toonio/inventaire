@@ -17,6 +17,7 @@
 	import { CATALOGUE_ATTRIBUTION } from '$lib/autoAttribution.js';
 	import StarRating from '$lib/components/StarRating.svelte';
 	import PhotoInput from '$lib/components/PhotoInput.svelte';
+	import PhotoLightbox from '$lib/components/PhotoLightbox.svelte';
 	import { base } from '$app/paths';
 
 	/** Extra attribution choice always offered alongside the configured people. */
@@ -310,13 +311,7 @@
 	function closeLightbox() {
 		lightbox = null;
 	}
-
-	function handleLightboxKeydown(e) {
-		if (e.key === 'Escape') closeLightbox();
-	}
 </script>
-
-<svelte:window onkeydown={handleLightboxKeydown} />
 
 {#snippet itemCard(entry, showCategory)}
 	{@const idSuffix = entryKey(entry).replace(/[^a-zA-Z0-9]+/g, '-')}
@@ -515,11 +510,7 @@
 	</div>
 {/if}
 
-{#if lightbox}
-	<div class="lightbox" onclick={closeLightbox} role="presentation">
-		<img src={lightbox.url} alt={lightbox.alt} />
-	</div>
-{/if}
+<PhotoLightbox photo={lightbox} onClose={closeLightbox} />
 
 <style>
 	.hide-attributed-toggle {
@@ -557,23 +548,5 @@
 		padding: 0;
 		border: none;
 		background: none;
-	}
-
-	.lightbox {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(0, 0, 0, 0.85);
-		padding: 1rem;
-	}
-
-	.lightbox img {
-		max-width: 100%;
-		max-height: 100%;
-		object-fit: contain;
-		border-radius: 4px;
 	}
 </style>

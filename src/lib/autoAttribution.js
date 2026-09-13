@@ -69,6 +69,7 @@ export async function planAutoAttributions(accessToken) {
 				columnIndex: columnIndex.attribution,
 				itemNumber: item.itemNumber,
 				designation: item.designation,
+				photo: item.photo,
 				attribution
 			});
 		});

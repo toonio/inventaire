@@ -19,6 +19,8 @@
 		CATALOGUE_ATTRIBUTION
 	} from '$lib/autoAttribution.js';
 	import { requestRefresh } from '$lib/stores/refresh.svelte.js';
+	import { resolvePhotoUrl } from '$lib/google/drive.js';
+	import PhotoLightbox from '$lib/components/PhotoLightbox.svelte';
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 
@@ -103,6 +105,7 @@
 	let autoError = $state('');
 	let autoPlan = $state(null);
 	let autoApplied = $state(null);
+	let autoLightbox = $state(null);
 
 	const autoCatalogueCount = $derived(
 		autoPlan?.plan.filter((e) => e.attribution === CATALOGUE_ATTRIBUTION).length ?? 0
@@ -149,6 +152,7 @@
 
 	function closeAutoAttribution() {
 		autoOpen = false;
+		autoLightbox = null;
 	}
 </script>
 
@@ -323,6 +327,8 @@
 			</div>
 		</div>
 	</div>
+
+	<PhotoLightbox photo={autoLightbox} onClose={() => (autoLightbox = null)} />
 {/if}
 
 {#if autoOpen}
@@ -331,7 +337,7 @@
 		onclick={() => !autoApplying && closeAutoAttribution()}
 		role="presentation"
 	>
-		<div class="recap-card" onclick={(e) => e.stopPropagation()} role="presentation">
+		<div class="recap-card auto-card" onclick={(e) => e.stopPropagation()} role="presentation">
 			<h2>Auto-attribution</h2>
 			{#if autoError}<p class="error-banner">{autoError}</p>{/if}
 
@@ -358,8 +364,25 @@
 					</p>
 					<div class="auto-plan-list">
 						{#each autoPlan.plan as entry (`${entry.tabTitle}::${entry.rowNumber}`)}
+							{@const thumbUrl = resolvePhotoUrl(entry.photo)}
 							<div class="recap-row">
-								<span>
+								{#if thumbUrl}
+									<button
+										type="button"
+										class="auto-plan-thumb"
+										onclick={() =>
+											(autoLightbox = {
+												url: resolvePhotoUrl(entry.photo, 2048),
+												alt: entry.designation || 'objet sans désignation'
+											})}
+										aria-label="Voir la photo en grand"
+									>
+										<img src={thumbUrl} alt={entry.designation} />
+									</button>
+								{:else}
+									<span class="auto-plan-thumb auto-plan-thumb-empty"></span>
+								{/if}
+								<span class="auto-plan-label">
 									<span class="muted">{entry.tabTitle} ·</span>
 									{#if entry.itemNumber}<span class="muted">N°{entry.itemNumber} —</span>{/if}
 									{entry.designation || '(sans désignation)'}
@@ -392,4 +415,6 @@
 			</div>
 		</div>
 	</div>
+
+	<PhotoLightbox photo={autoLightbox} onClose={() => (autoLightbox = null)} />
 {/if}
